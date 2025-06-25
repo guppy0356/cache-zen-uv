@@ -22,5 +22,23 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
+      - name: Cache virtual environment
+        id: cache-venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+
+      # cache miss
       - name: Install the project
-        run: uv sync --locked --all-extras --dev
+        if: steps.cache-venv.outputs.cache-hit != 'true'
+        run: |
+          echo "Virtual environment cache miss - installing..."
+          time uv sync --locked --all-extras --dev
+
+      # cache hit
+      - name: Validate cached environment
+        if: steps.cache-venv.outputs.cache-hit == 'true'
+        run: |
+          echo "Virtual environment cache hit!"
+          echo "Packages installed: $(uv pip list | wc -l)"
